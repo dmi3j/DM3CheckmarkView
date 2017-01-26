@@ -12,84 +12,80 @@
 
 @property BOOL shouldAnimateDrawing;
 
+@property CAShapeLayer *circleLayer;
+@property CAShapeLayer *checkmarkLayer;
+
 @end
 
 @implementation DM3CheckmarkView
 
-- (UIColor *)circleColor {
-    if (!_circleColor) {
-        _circleColor = [UIColor colorWithRed:46.0f / 255.0f green:204.0f / 255.0f blue:113.0f / 255.0f alpha:1.0];
+- (instancetype)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self configureLayers];
+    }
+    return self;
+}
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    [self configureLayers];
+}
+
+- (void)configureLayers {
+    self.circleLayer = [CAShapeLayer layer];
+    self.checkmarkLayer = [CAShapeLayer layer];
+}
+
+- (void)setDefaultValues {
+
+    if (!self.circleColor) {
+        self.circleColor = [UIColor colorWithRed:46.0f / 255.0f green:204.0f / 255.0f blue:113.0f / 255.0f alpha:1.0];
     }
 
-    return _circleColor;
-}
-
-- (UIColor *)checkmarkColor {
-    if (!_checkmarkColor) {
-        _checkmarkColor = [UIColor whiteColor];
+    if (!self.checkmarkColor) {
+        self.checkmarkColor = [UIColor whiteColor];
     }
 
-    return _checkmarkColor;
-}
-
-- (double)animationDuration {
-    if (!_animationDuration) {
-        _animationDuration = 0.8;
+    if (!self.animationDuration) {
+        self.animationDuration = 0.8;
     }
-
-    return _animationDuration;
 }
-
-- (void)animateCheckmark {
-    self.shouldAnimateDrawing = YES;
-    [self setNeedsDisplay];
-}
-
-// Only override drawRect: if you perform custom drawing.
-// An empty implementation adversely affects performance during animation.
 - (void)drawRect:(CGRect)rect {
     // Drawing code
 
+    [self setDefaultValues];
+
     CGFloat diametr = 0.98 * MIN(self.bounds.size.width, self.bounds.size.height);
+    CGFloat radius = diametr / 2;
 
-    // Set up the shape of the circle
-    int radius = diametr / 2;
-    CAShapeLayer *circle = [CAShapeLayer layer];
-    // Make a circular shape
-    circle.path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, 2.0 * radius, 2.0 * radius)
-                                             cornerRadius:radius].CGPath;
-    // Center the shape in self.view
-    circle.position = CGPointMake(CGRectGetMidX(self.bounds) - radius,
-                                  CGRectGetMidY(self.bounds) - radius);
+    [self clearDrawing];
 
-    // Configure the apperence of the circle
-    circle.fillColor = self.circleColor.CGColor;
-    circle.strokeColor = self.circleColor.CGColor;
-    circle.lineWidth = 1;
+    self.circleLayer.path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, 2.0 * radius, 2.0 * radius)
+                                                       cornerRadius:radius].CGPath;
+    self.circleLayer.position = CGPointMake(CGRectGetMidX(self.bounds) - radius,
+                                            CGRectGetMidY(self.bounds) - radius);
+    self.circleLayer.fillColor = self.circleColor.CGColor;
+    self.circleLayer.strokeColor = self.circleColor.CGColor;
+    self.circleLayer.lineWidth = 1;
 
-    // Add to parent layer
-    [self.layer addSublayer:circle];
+    [self.layer addSublayer:self.circleLayer];
 
-        UIBezierPath *checkMarkPath = [UIBezierPath bezierPath];
+    UIBezierPath *checkMarkPath = [UIBezierPath bezierPath];
+    CGPoint viewCenter = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
+    CGPoint p1 = CGPointMake(viewCenter.x - (radius * 0.6), viewCenter.y);
+    CGPoint p2 = CGPointMake(viewCenter.x - (radius * 0.2), viewCenter.y + (radius * 0.4));
+    CGPoint p3 = CGPointMake(viewCenter.x + (radius * 0.6), viewCenter.y - (radius * 0.4));
+    [checkMarkPath moveToPoint:p1];
+    [checkMarkPath addLineToPoint:p2];
+    [checkMarkPath addLineToPoint:p3];
+    self.checkmarkLayer.path = checkMarkPath.CGPath;
+    self.checkmarkLayer.strokeColor = self.checkmarkColor.CGColor;
+    self.checkmarkLayer.fillColor = nil;
+    self.checkmarkLayer.lineWidth = diametr / 10.0f;
+    self.checkmarkLayer.lineJoin = kCALineCapSquare;
 
-        CGPoint viewCenter = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
-        CGPoint p1 = CGPointMake(viewCenter.x - (radius * 0.6), viewCenter.y);
-        CGPoint p2 = CGPointMake(viewCenter.x - (radius * 0.2), viewCenter.y + (radius * 0.4));
-        CGPoint p3 = CGPointMake(viewCenter.x + (radius * 0.6), viewCenter.y - (radius * 0.4));
-
-        [checkMarkPath moveToPoint:p1];
-        [checkMarkPath addLineToPoint:p2];
-        [checkMarkPath addLineToPoint:p3];
-
-        CAShapeLayer *checkMarkPathLayer = [CAShapeLayer layer];
-        checkMarkPathLayer.frame = self.bounds;
-        checkMarkPathLayer.path = checkMarkPath.CGPath;
-        checkMarkPathLayer.strokeColor = self.checkmarkColor.CGColor;
-        checkMarkPathLayer.fillColor = nil;
-        checkMarkPathLayer.lineWidth = diametr / 10.0f;
-        checkMarkPathLayer.lineJoin = kCALineCapSquare;
-
-        [self.layer addSublayer:checkMarkPathLayer];
+    [self.layer addSublayer:self.checkmarkLayer];
 
     if (self.shouldAnimateDrawing) {
         CABasicAnimation *pathAnimation = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
@@ -97,9 +93,21 @@
         pathAnimation.fromValue = @0;
         pathAnimation.toValue = @1;
         pathAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-        [checkMarkPathLayer addAnimation:pathAnimation forKey:@"strokeEnd"];
+        [self.checkmarkLayer addAnimation:pathAnimation forKey:@"strokeEnd"];
         self.shouldAnimateDrawing = NO;
     }
+}
+
+#pragma mark - Public API
+
+- (void)animateCheckmark {
+    self.shouldAnimateDrawing = YES;
+    [self setNeedsDisplay];
+}
+
+- (void)clearDrawing {
+    [self.circleLayer removeFromSuperlayer];
+    [self.checkmarkLayer removeFromSuperlayer];
 }
 
 @end
