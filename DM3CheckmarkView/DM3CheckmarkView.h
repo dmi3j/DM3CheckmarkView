@@ -15,5 +15,6 @@
 @property (nonatomic) double animationDuration;
 
 - (void)animateCheckmark;
+- (void)clearDrawing;
 
 @end
